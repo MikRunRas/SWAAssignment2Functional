@@ -144,10 +144,10 @@ describe("Board", () => {
             })
 
             describe("invalid moves", () => {
-                it("does not allow moves that make no matches", () => {
+                it("does not count the piece that is moved away", () => {
                     expect(Board.canMove(board, {row: 0, col: 0}, {row: 0, col: 0})).toEqual(false)
                 })
-                it("does not count the piece that is moved away", () => {
+                it("does not allow moves that make no matches", () => {
                     expect(Board.canMove(board, {row: 1, col: 1}, {row: 2, col: 1})).toEqual(false)
                 })
                 it("recognizes moves on different rows and columns as invalid", () => {
