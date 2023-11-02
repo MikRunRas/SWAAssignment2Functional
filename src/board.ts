@@ -256,7 +256,8 @@ export function move<T>(
   // Add Matches to Effect
   match = { matched: matched, positions: matches };
   effects.push({ kind: "Match", match: match });
-
+  effects.push({ kind: "Refill" });
+  
   // Create Move Result
   result = { board: board, effects: effects };
 
@@ -281,6 +282,7 @@ function getMatchesFor<T>(
     let match = { matched: matched, positions: matches };
     matchEvents = { kind: "Match", match: match };
   }
+
   return matchEvents;
 }
 
