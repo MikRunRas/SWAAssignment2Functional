@@ -50,32 +50,32 @@ export function create<T>(
     return state;
   }
 
-  function populateBoard(board: T[][]): T[][] {
-    let newBoard: T[][] = board.slice();
-
-    // Loop through Board State, row -> col, col, [...]
-    for (let row = 0; row < h; row++) {
-      for (let col = 0; col < w; col++) {
-        // Return if Piece already exists
-        if (board[col][row] !== null) continue;
-
-        // Set the Piece
-        let nextPiece = generator.next();
-        newBoard[col][row] = nextPiece;
-      }
-    }
-
-    return newBoard;
-  }
-
   // Return the Board
   return {
     // Field: Value
     sequenceGenerator: generator,
-    boardState: populateBoard(createEmptyBoard()),
+    boardState: populateBoard(createEmptyBoard(), generator),
     width: w,
     height: h,
   };
+}
+
+function populateBoard<T>(board: T[][], generator: Generator<T>): T[][] {
+  let newBoard: T[][] = board.slice();
+
+  // Loop through Board State, row -> col, col, [...]
+  for (let row = 0; row < newBoard[0].length; row++) {
+    for (let col = 0; col < newBoard.length; col++) {
+      // Return if Piece already exists
+      if (board[col][row] !== null) continue;
+
+      // Set the Piece
+      let nextPiece = generator.next();
+      newBoard[col][row] = nextPiece;
+    }
+  }
+
+  return newBoard;
 }
 
 export function piece<T>(board: Board<T>, p: Position): T | undefined {
@@ -224,9 +224,6 @@ export function move<T>(
   // Create the board with the pieces swapped
   let newBoardState: T[][] = swapPieces(board.boardState, first, second);
 
-  // Update the Board with the new State
-  board.boardState = newBoardState;
-
   // Create Variables
   let matched: T;
   let matches: Position[];
@@ -235,34 +232,48 @@ export function move<T>(
 
   // Check for Matches on First Position
   let dir = anyMatching(newBoardState, first);
-
-  if (dir == "Both") {
-    effects.push(getMatchesFor(newBoardState, first, "Horizontal", matched));
-    effects.push(getMatchesFor(newBoardState, first, "Vertical", matched));
-  } else {
-    effects.push(getMatchesFor(newBoardState, first, dir, matched));
+  if (dir != "None") {
+    if (dir == "Both") {
+      effects.push(getMatchesFor(newBoardState, first, "Horizontal", matched));
+      effects.push(getMatchesFor(newBoardState, first, "Vertical", matched));
+    } else {
+      effects.push(getMatchesFor(newBoardState, first, dir, matched));
+    }
   }
-
   // Check for Matches on Second Position
   dir = anyMatching(newBoardState, second);
-
-  if (dir == "Both") {
-    effects.push(getMatchesFor(newBoardState, second, "Horizontal", matched));
-    effects.push(getMatchesFor(newBoardState, second, "Vertical", matched));
-  } else {
-    effects.push(getMatchesFor(newBoardState, second, dir, matched));
+  if (dir != "None") {
+    if (dir == "Both") {
+      effects.push(getMatchesFor(newBoardState, second, "Horizontal", matched));
+      effects.push(getMatchesFor(newBoardState, second, "Vertical", matched));
+    } else {
+      effects.push(getMatchesFor(newBoardState, second, dir, matched));
+    }
   }
+
+  // REMOVE AND REFILL MATCHED POSITIONS
+  // let cleaned = removeMatchesFrom(newBoardState, matches);
+  // let refilled = undefined;
 
   // Add Matches to Effect
   match = { matched: matched, positions: matches };
   effects.push({ kind: "Match", match: match });
   effects.push({ kind: "Refill" });
-  
+
   // Create Move Result
+  board.boardState = newBoardState
   result = { board: board, effects: effects };
 
   // Return Statement
   return result;
+}
+
+function removeMatchesFrom<T>(board: T[][], matches: Position[]): T[][] {
+  let newBoard: T[][] = board.map((arr) => arr.slice());
+
+  matches.forEach((m) => (newBoard[m.col][m.row] = null));
+
+  return newBoard;
 }
 
 function getMatchesFor<T>(
