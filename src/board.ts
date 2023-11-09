@@ -99,6 +99,7 @@ export function canMove<T>(
   first: Position,
   second: Position
 ): boolean {
+
   function illegalMoves(): boolean {
     let piece1 = piece(board, first);
     let piece2 = piece(board, second);
@@ -236,8 +237,16 @@ export function move<T>(
     if (dir == "Both") {
       effects.push(getMatchesFor(newBoardState, first, "Horizontal", matched));
       effects.push(getMatchesFor(newBoardState, first, "Vertical", matched));
+      matches = getMatches(newBoardState, "Horizontal", first);
+      matches = matches.concat(getMatches(newBoardState, "Vertical", first));
     } else {
       effects.push(getMatchesFor(newBoardState, first, dir, matched));
+      if(matches === undefined){
+        matches = getMatches(newBoardState, dir, first);
+      }
+      else{
+        matches = matches.concat(getMatches(newBoardState, dir, first));
+      }
     }
   }
   // Check for Matches on Second Position
@@ -246,14 +255,29 @@ export function move<T>(
     if (dir == "Both") {
       effects.push(getMatchesFor(newBoardState, second, "Horizontal", matched));
       effects.push(getMatchesFor(newBoardState, second, "Vertical", matched));
+      if(matches === undefined){
+          matches = getMatches(newBoardState, "Horizontal", second);
+          matches = matches.concat(getMatches(newBoardState, "Vertical", second));
+      }
+      else{
+        matches = matches.concat(getMatches(newBoardState, "Horizontal", second));
+        matches = matches.concat(getMatches(newBoardState, "Vertical", second));
+      }
     } else {
       effects.push(getMatchesFor(newBoardState, second, dir, matched));
+      if(matches === undefined){
+        matches = getMatches(newBoardState, dir, second);
+      }
+      else{
+        matches = matches.concat(getMatches(newBoardState, dir, second));
+      }
     }
   }
 
+
   // REMOVE AND REFILL MATCHED POSITIONS
-  // let cleaned = removeMatchesFrom(newBoardState, matches);
-  // let refilled = undefined;
+  let cleaned = removeMatchesFrom(newBoardState, matches);
+  let refilled = refillBoard({ ...board, boardState: cleaned });
 
   // Add Matches to Effect
   match = { matched: matched, positions: matches };
@@ -261,8 +285,7 @@ export function move<T>(
   effects.push({ kind: "Refill" });
 
   // Create Move Result
-  board.boardState = newBoardState
-  result = { board: board, effects: effects };
+  result = { board: refilled, effects: effects };
 
   // Return Statement
   return result;
@@ -275,6 +298,55 @@ function removeMatchesFrom<T>(board: T[][], matches: Position[]): T[][] {
 
   return newBoard;
 }
+
+export function refillBoard<T>(board: Board<T>): Board<T> {
+  let newBoardState: T[][] = board.boardState.map((arr) => arr.slice());
+
+// Loop through each row starting from the bottom
+for (let row = board.height - 1; row > 0; row--) {
+  for (let col = 0; col < board.width; col++) {
+    // Check if the current position is null
+    if (newBoardState[col][row] === null) {
+      // Find the first non-null piece in the column above
+      let nonNullRow = row - 1;
+      while (nonNullRow >= 0 && newBoardState[col][nonNullRow] === null) {
+        nonNullRow--;
+      }
+
+      // Replace null with the first non-null piece above it (if found)
+      if (nonNullRow >= 0) {
+        newBoardState[col][row] = newBoardState[col][nonNullRow];
+        newBoardState[col][nonNullRow] = null; // Set the position above to null
+      }
+    }
+  }
+}
+
+// Loop through each row from the bottom to the top
+for (let row = board.height - 1; row >= 0; row--) {
+  for (let col = 0; col < board.width; col++) {
+    // Check if the tile is missing (null)
+    if (newBoardState[col][row] === null) {
+      // Generate a new tile using the sequence generator
+      let newTile = board.sequenceGenerator.next();
+
+      // Replace the missing tile with the new one
+      newBoardState[col][row] = newTile;
+    }
+  }
+}
+
+  // Create a new board with the updated board state
+  let newBoard: Board<T> = {
+    sequenceGenerator: board.sequenceGenerator,
+    boardState: newBoardState,
+    width: board.width,
+    height: board.height,
+  };
+
+  return newBoard;
+}
+
 
 function getMatchesFor<T>(
   newBoardState: T[][],

@@ -13,7 +13,7 @@ class CyclicGenerator implements Generator<string> {
 
     next(): string {
         const n = this.sequence.charAt(this.index)
-        this.index = (this.index + 1) % this.sequence.length
+        this.index = (this.index + 1) % this.sequence.length 
         return n
     }
 }
