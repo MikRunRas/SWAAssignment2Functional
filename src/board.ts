@@ -38,7 +38,7 @@ export function create<T>(c_generator: Generator<T>, c_width: number, c_height: 
     // Loop through number of Columns
     for (let col = 0; col < c_width; col++) {
       // Create an Empty Column
-      let ceb_column: T[] = [];
+      const ceb_column: T[] = [];
 
       // Loop through number of Rows
       for (let row = 0; row < c_height; row++) {
@@ -79,7 +79,7 @@ function populateBoard<T>(pb_board: T[][], pb_generator: Generator<T>): T[][] {
       if (pb_board[col][row]) continue;
 
       // Set the Piece
-      const pb_nextPiece = pb_generator.next();
+      const pb_nextPiece:T = pb_generator.next();
       pb_newBoard[col][row] = pb_nextPiece;
     }
   }
@@ -100,10 +100,10 @@ export function piece<T>(p_board: Board<T>, p_pos: Position): T | undefined {
   }
 
   // Get the BoardState
-  const p_boardState = p_board.boardState;
+  const p_boardState:T[][] = p_board.boardState;
 
   // Retrieve Piece from BoardState
-  const p_piece = p_boardState[p_pos.col][p_pos.row];
+  const p_piece :T= p_boardState[p_pos.col][p_pos.row];
 
   // Return Piece
   return p_piece;
@@ -124,28 +124,28 @@ export function piece<T>(p_board: Board<T>, p_pos: Position): T | undefined {
  */
 export function canMove<T>(cm_board: Board<T>, cm_first: Position, cm_second: Position): boolean {
   function illegalMoves(): boolean {
-    const im_piece1 = piece(cm_board, cm_first);
-    const im_piece2 = piece(cm_board, cm_second);
+    const im_piece1:T = piece(cm_board, cm_first);
+    const im_piece2:T = piece(cm_board, cm_second);
     if (im_piece1 === undefined || im_piece2 === undefined) return true;
 
-    const im_c1 = cm_first.col,
-      im_c2 = cm_second.col,
-      im_r1 = cm_first.row,
-      im_r2 = cm_second.row;
+    const im_c1 :number = cm_first.col,
+      im_c2:number  = cm_second.col,
+      im_r1:number  = cm_first.row,
+      im_r2:number  = cm_second.row;
 
     // Return true if not in a Cardinal Direction
     if (im_c1 != im_c2 && im_r1 != im_r2) return true;
 
     // Calculate Difference between Columns && Rows && Magic (Maths)
-    const im_col_diff = im_c1 - im_c2,
-      im_row_diff = im_r1 - im_r2;
+    const im_col_diff:number  = im_c1 - im_c2,
+      im_row_diff:number  = im_r1 - im_r2;
 
     return im_col_diff == 0 && im_row_diff == 0;
   }
 
   function legalMoves(): boolean {
     // Perform a Swap to check for possible matches
-    let lm_simulatedBoard: T[][] = swapPieces(cm_board.boardState, cm_first, cm_second);
+    const lm_simulatedBoard: T[][] = swapPieces(cm_board.boardState, cm_first, cm_second);
 
     // Check if Any Matches are found
     if (anyMatchingOn(lm_simulatedBoard, cm_first) == "None" && anyMatchingOn(lm_simulatedBoard, cm_second) == "None") {
@@ -186,8 +186,8 @@ function anyMatchingOn<T>(amo_board: T[][], amo_pos: Position): "Horizontal" | "
   // Skip checking if Reference Piece is undefined
   if (amo_refPiece) {
     // Check if there are any matches
-    const amo_match_WE = checkNext(amo_board, amo_refPiece, amo_pos, amo_w) + checkNext(amo_board, amo_refPiece, amo_pos, amo_e) - 1; // -1 to ensure the piece itself isn't counted twice
-    const amo_match_NS = checkNext(amo_board, amo_refPiece, amo_pos, amo_n) + checkNext(amo_board, amo_refPiece, amo_pos, amo_s) - 1; // -1 to ensure the piece itself isn't counted twice
+    const amo_match_WE:number  = checkNext(amo_board, amo_refPiece, amo_pos, amo_w) + checkNext(amo_board, amo_refPiece, amo_pos, amo_e) - 1; // -1 to ensure the piece itself isn't counted twice
+    const amo_match_NS:number  = checkNext(amo_board, amo_refPiece, amo_pos, amo_n) + checkNext(amo_board, amo_refPiece, amo_pos, amo_s) - 1; // -1 to ensure the piece itself isn't counted twice
 
     // Check direction for matches
     if (amo_match_WE >= 3 && amo_match_NS >= 3) return "Both";
@@ -261,14 +261,13 @@ export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: P
    * @param [cf_boardState=m_newBoardState] optional BoardState to check
    */
   function checkFor(cf_pos: Position, cf_boardState: T[][] = m_newBoardState) {
-    let cf_direction: "None" | "Horizontal" | "Vertical" | "Both";
+    const cf_direction: "None" | "Horizontal" | "Vertical" | "Both" = anyMatchingOn(cf_boardState, cf_pos);
 
-    cf_direction = anyMatchingOn(cf_boardState, cf_pos);
     if (cf_direction != "None") {
       if (cf_direction == "Both") {
         // Get the Horizontal & Vertical Matches
-        let cf_horizontalMatches: Effect<T> = getMatchEvent(cf_boardState, cf_pos, "Horizontal");
-        let cf_verticalMatches: Effect<T> = getMatchEvent(cf_boardState, cf_pos, "Vertical");
+        const cf_horizontalMatches: Effect<T> = getMatchEvent(cf_boardState, cf_pos, "Horizontal");
+        const cf_verticalMatches: Effect<T> = getMatchEvent(cf_boardState, cf_pos, "Vertical");
 
         // Push the Matches to the Effects
         m_effects.push(cf_horizontalMatches);
@@ -308,7 +307,7 @@ export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: P
 
   // Create Variables used in checkFor(Position)
   let m_matches: Position[];
-  let m_effects: Effect<T>[] = [];
+  const m_effects: Effect<T>[] = [];
 
   // Check for Matches on First Position
   checkFor(m_first);
@@ -340,7 +339,7 @@ export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: P
   }
 
   // Create Move Result
-  const m_result = { board: m_refilled, effects: m_effects };
+  const m_result: MoveResult<T> = { board: m_refilled, effects: m_effects };
 
   // Return Statement
   return m_result;
@@ -397,7 +396,7 @@ export function refillBoard<T>(rb_board: Board<T>): Board<T> {
       // Check if the tile is missing (null)
       if (!rb_newBoardState[col][row]) {
         // Generate a new tile using the sequence generator
-        const rb_newTile = rb_board.sequenceGenerator.next();
+        const rb_newTile: T = rb_board.sequenceGenerator.next();
 
         // Replace the missing tile with the new one
         rb_newBoardState[col][row] = rb_newTile;
@@ -476,7 +475,7 @@ function getMatchPositions<T>(gmp_board: T[][], gmp_dir: "Vertical" | "Horizonta
     const gm_matching: Position[] = [];
 
     // Direction
-    let gm_dir_vector = directionToVector(gm_dir);
+    const gm_dir_vector: Position = directionToVector(gm_dir);
 
     addNext(gm_board, gm_pos, gm_dir_vector, gm_refPiece, gm_matching);
 
@@ -502,7 +501,7 @@ function getMatchPositions<T>(gmp_board: T[][], gmp_dir: "Vertical" | "Horizonta
 
   function directionToVector(dtv_string: "Vertical" | "Horizontal", dtv_isReverse: boolean = false) {
     // Get Direction as a Vector
-    const dtv_scale = dtv_isReverse ? -1 : 1; // Convert Boolean to Multiplier
+    const dtv_scale : number= dtv_isReverse ? -1 : 1; // Convert Boolean to Multiplier
     switch (dtv_string) {
       case "Vertical":
         return { col: 0, row: dtv_scale };
@@ -571,7 +570,7 @@ function getPiece<T>(gp_board: T[][], gp_pos: Position): T | undefined {
  * @returns duplicate of `db_board`
  */
 function duplicateBoard<T>(db_board: T[][]): T[][] {
-  const db_duplicate = db_board.map((arr) => arr.slice());
+  const db_duplicate: T[][] = db_board.map((arr) => arr.slice());
   return db_duplicate;
 }
 
