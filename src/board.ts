@@ -24,6 +24,13 @@ export type MoveResult<T> = {
   effects: Effect<T>[];
 };
 
+/**
+ * Creates a Match 3 Board
+ * @param c_generator piece generator
+ * @param c_width width of play area
+ * @param c_height height of play area
+ * @returns board of given `c_width` and `c_height` filled with pieces from the `c_generator`
+ */
 export function create<T>(c_generator: Generator<T>, c_width: number, c_height: number): Board<T> {
   function createEmptyBoard(): T[][] {
     const ceb_boardState: T[][] = [];
@@ -56,6 +63,12 @@ export function create<T>(c_generator: Generator<T>, c_width: number, c_height: 
   };
 }
 
+/**
+ * Populates a 2-Dimensional Board [GRID] with Pieces using the given Generator
+ * @param pb_board grid of type `T[][]` to fill with pieces
+ * @param pb_generator generator for pieces of type `T`
+ * @returns populated grid of type `T[][]`
+ */
 function populateBoard<T>(pb_board: T[][], pb_generator: Generator<T>): T[][] {
   const pb_newBoard: T[][] = duplicateBoard(pb_board);
 
@@ -74,6 +87,12 @@ function populateBoard<T>(pb_board: T[][], pb_generator: Generator<T>): T[][] {
   return pb_newBoard;
 }
 
+/**
+ * Retrieve a Piece on the Board, using a 2D
+ * @param p_board board containing grid of type `T[][]` to retrieve a piece, `T`, from
+ * @param p_pos 2D position of type `Position`
+ * @returns piece of type `T` if exists, `undefined` if position is out of bounds
+ */
 export function piece<T>(p_board: Board<T>, p_pos: Position): T | undefined {
   // Check for Out Of Bounds (OOB)
   if (outOfBounds(p_board, p_pos)) {
@@ -90,6 +109,19 @@ export function piece<T>(p_board: Board<T>, p_pos: Position): T | undefined {
   return p_piece;
 }
 
+/**
+ * Check if a Move is legal by pretending to perform move
+ * Valid Moves have to satisfy the following
+ * 1. moves pieces inside the board
+ * 0. moving 2 different pieces
+ * 0. pieces share either column or row
+ * 0. moved pieces cause at least 1 match
+ * 
+ * @param cm_board board containing grid of type `T[][]`
+ * @param cm_first position of type `Position`
+ * @param cm_second position of type `Position`
+ * @returns `true` if move is valid, `false` otherwise
+ */
 export function canMove<T>(cm_board: Board<T>, cm_first: Position, cm_second: Position): boolean {
   function illegalMoves(): boolean {
     const im_piece1 = piece(cm_board, cm_first);
@@ -128,6 +160,18 @@ export function canMove<T>(cm_board: Board<T>, cm_first: Position, cm_second: Po
   return legalMoves();
 }
 
+/**
+ * Checks if any matches can be found on the given board, using the position parameter as a base
+ *
+ *  _intended use when pieces are moved, as they have to be part of a match to be a valid move_
+ * @param amo_board grid of type `T[][]`
+ * @param amo_pos position of type `Position`
+ * @returns
+ * - `"None"`: if no matches are found
+ * - `"Horizontal"`: if a match is found between columns
+ * - `"Vertical"`: if a match is found inside a column
+ * - `"Both"`: if a match satisfies **both** `"Horizontal"` and `"Vertical"` requirements
+ */
 function anyMatchingOn<T>(amo_board: T[][], amo_pos: Position): "Horizontal" | "Vertical" | "Both" | "None" {
   // Reference Vectors
   const [amo_n, amo_e, amo_s, amo_w]: Position[] = [
@@ -153,6 +197,16 @@ function anyMatchingOn<T>(amo_board: T[][], amo_pos: Position): "Horizontal" | "
   return "None";
 }
 
+/**
+ * Counts the number of pieces matching `cn_refPiece` in the given direction, starting with the `cn_currPos`
+ * @param cn_board grid of type `T[][]`
+ * @param cn_refPiece reference piece of type `T`
+ * @param cn_currPos current position of type `Position`
+ * @param cn_dir direction as a vector using type `Position`
+ * 
+ * `{col: 0, row: -1}` | `{col: 0, row: 1}` | `{col: -1, row: 0}` | `{col: 1, row: 0}`
+ * @returns `number` of matching pieces found in given direction including `cn_currPos`
+ */
 function checkNext<T>(cn_board: T[][], cn_refPiece: T, cn_currPos: Position, cn_dir: Position): number {
   // Get the Piece at the current Position
   const cn_currPiece: T = getPiece(cn_board, cn_currPos);
@@ -172,6 +226,13 @@ function checkNext<T>(cn_board: T[][], cn_refPiece: T, cn_currPos: Position, cn_
   }
 }
 
+/**
+ * Swap pieces on a board
+ * @param sp_board grid of type `T[][]`
+ * @param sp_p1 position of type `Position`
+ * @param sp_p2 position of type `Position`
+ * @returns grid of type `T[][]` with pieces on positions `sp_p1` and `sp_p2` being swapped
+ */
 function swapPieces<T>(sp_board: T[][], sp_p1: Position, sp_p2: Position): T[][] {
   // Copy the Board
   const sp_newBoard: T[][] = duplicateBoard(sp_board);
@@ -185,6 +246,14 @@ function swapPieces<T>(sp_board: T[][], sp_p1: Position, sp_p2: Position): T[][]
   return sp_newBoard;
 }
 
+/**
+ * Perform a Move. This checks the legality through `canMove()` before performing any moves
+ * @param m_generator not being used
+ * @param m_board board containing grid of type `T[][]`
+ * @param m_first position of type `Position`
+ * @param m_second position of type `Position`
+ * @returns result of move as `MoveResult<T>`
+ */
 export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: Position, m_second: Position): MoveResult<T> {
   /**
    * Checks a given position for Matches and adds a Match Event to m_effects as well as adding the Match Positions to m_matches
@@ -247,22 +316,21 @@ export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: P
   // Check for Matches on Second Position
   checkFor(m_second);
 
-  
   // REMOVE AND REFILL MATCHED POSITIONS
   m_newBoardState = removeMatchesFrom(m_newBoardState, m_matches);
   let m_refilled: Board<T> = refillBoard({ ...m_board, boardState: m_newBoardState });
   m_effects.push({ kind: "Refill" });
-  
+
   // Check for any matches caused by Refilling
   let m_newMatches: { any: boolean; position: Position } = anyMatching(m_refilled);
   while (m_newMatches.any) {
     // Reset Matches
-    m_matches = []
+    m_matches = [];
     checkFor(m_newMatches.position, m_refilled.boardState);
 
     // Remove Matches
     m_newBoardState = removeMatchesFrom(m_refilled.boardState, m_matches);
-    
+
     // Refill
     m_refilled = refillBoard({ ...m_board, boardState: m_newBoardState });
     m_effects.push({ kind: "Refill" });
@@ -278,6 +346,12 @@ export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: P
   return m_result;
 }
 
+/**
+ * Remove the Pieces on a grid using a list of positions
+ * @param rmf_board 2D grid of type `T[][]`
+ * @param rmf_matches positions of the pieces to be removed of type `Position`
+ * @returns 2D grid of type `T[][]` with the positions in `rmf_matches` set to `null`
+ */
 function removeMatchesFrom<T>(rmf_board: T[][], rmf_matches: Position[]): T[][] {
   // Duplicate BoardState
   const rmf_newBoard: T[][] = duplicateBoard(rmf_board);
@@ -289,6 +363,11 @@ function removeMatchesFrom<T>(rmf_board: T[][], rmf_matches: Position[]): T[][] 
   return rmf_newBoard;
 }
 
+/**
+ * Replace all empty spots (`false`/`null`/`undefined`) in the 2D grid found in `rb_board`
+ * @param rb_board board containing grid of type `T[][]`
+ * @returns refilled board containing grid of type `T[][]`
+ */
 export function refillBoard<T>(rb_board: Board<T>): Board<T> {
   const rb_newBoardState: T[][] = duplicateBoard(rb_board.boardState);
 
@@ -338,25 +417,32 @@ export function refillBoard<T>(rb_board: Board<T>): Board<T> {
 }
 
 /**
- *
- * @param gme_board updated state of the board
- * @param gme_pos position to start from
- * @param gme_dir cardinal direction to check
- * @returns match event
+ * Create an `Effect<T>` with the Event caused by a Match
+ * @param gme_board grid of type `T[][]`
+ * @param gme_pos first position of a match as `Position`
+ * @param gme_dir orientation to check of type `"Vertical"`/`"Horizontal"`/`"None"`
+ * @returns null if `gme_dir` is `"None"`, otherwise match event of type `Effect<T>` containing the matched piece, `T`, and positions `Position[]`
  */
 function getMatchEvent<T>(gme_board: T[][], gme_pos: Position, gme_dir: "Vertical" | "Horizontal" | "None"): Effect<T> {
-  // Return Null if no direction was found
+  // Return null if no orientation was found
   if (gme_dir == "None") return null;
 
   // Get Matches
-  const gme_piece = getPiece(gme_board, gme_pos);
-  const gme_matchPositions = getMatchPositions(gme_board, gme_dir, gme_pos);
+  const gme_piece: T = getPiece(gme_board, gme_pos);
+  const gme_matchPositions: Position[] = getMatchPositions(gme_board, gme_dir, gme_pos);
 
   // Add Matches to Effect
-  const gme_match = { matched: gme_piece, positions: gme_matchPositions };
+  const gme_match: Match<T> = { matched: gme_piece, positions: gme_matchPositions };
   return { kind: "Match", match: gme_match };
 }
 
+/**
+ * Get the positions of pieces in a match 
+ * @param gmp_board grid of type `T[][]`
+ * @param gmp_dir orientation of match either `"Vertical"`/`"Horizontal"`
+ * @param gmp_refPos position of any piece in match, type `Position`
+ * @returns 
+ */
 function getMatchPositions<T>(gmp_board: T[][], gmp_dir: "Vertical" | "Horizontal", gmp_refPos: Position): Position[] {
   function getFirstInDirection(gfid_board: T[][], gfid_pos: Position, gfid_dir: "Vertical" | "Horizontal", gfid_refPiece: T): Position {
     let gfid_dir_vector: Position = directionToVector(gfid_dir, true); // Vector Direction towards start of chain
@@ -409,7 +495,7 @@ function getMatchPositions<T>(gmp_board: T[][], gmp_dir: "Vertical" | "Horizonta
 
     // Break Recursion
     if (getPiece(an_board, am_nextPos) != am_refPiece) return;
-    
+
     // Recursive Checks
     addNext(an_board, am_nextPos, am_dir, am_refPiece, am_matchList);
   }
@@ -440,10 +526,9 @@ function getMatchPositions<T>(gmp_board: T[][], gmp_dir: "Vertical" | "Horizonta
 }
 
 /**
- * Get all Positions as a Position[], (row 0, col 0 -> MAX), (row 1, col 0 -> MAX)
- *
- * @param p_board Board to get positions for
- * @returns List of Positons
+ * Get all positions in a list starting with all columns in a row before moving to the next row
+ * @param p_board board containing grid of type `T[][]`
+ * @returns list of all positons as `Position[]`
  */
 export function positions<T>(p_board: Board<T>): Position[] {
   const p_positions: Position[] = [];
@@ -464,6 +549,12 @@ export function positions<T>(p_board: Board<T>): Position[] {
   return p_positions;
 }
 
+/**
+ * Get a piece from the board on a specific position
+ * @param gp_board grid of type `T[][]`
+ * @param gp_pos position of type `Position`
+ * @returns piece of type `T` if exists, `undefined` otherwise
+ */
 function getPiece<T>(gp_board: T[][], gp_pos: Position): T | undefined {
   if (gp_pos.col < 0 || gp_pos.row < 0 || gp_board.length <= gp_pos.col || gp_board[0].length <= gp_pos.row) {
     // Out Of Bounds
@@ -474,11 +565,22 @@ function getPiece<T>(gp_board: T[][], gp_pos: Position): T | undefined {
   return gp_board[gp_pos.col][gp_pos.row];
 }
 
+/**
+ * create a copy of a board without any links
+ * @param db_board grid of type `T[][]`
+ * @returns duplicate of `db_board`
+ */
 function duplicateBoard<T>(db_board: T[][]): T[][] {
   const db_duplicate = db_board.map((arr) => arr.slice());
   return db_duplicate;
 }
 
+/**
+ * Check if a position is within the bounds/playing area of the board
+ * @param oob_board board containing grid of type `T[][]`
+ * @param oob_pos position of type `Position` 
+ * @returns `true` if `oob_pos` is out of bounds, `false` otherwise
+ */
 function outOfBounds<T>(oob_board: Board<T>, oob_pos: Position): boolean {
   if (oob_pos.row < 0 || oob_pos.col < 0 || oob_pos.row >= oob_board.height || oob_pos.col >= oob_board.width) {
     return true;
