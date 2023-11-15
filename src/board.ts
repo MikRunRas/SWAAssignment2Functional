@@ -259,13 +259,7 @@ export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: P
     // Reset Matches
     m_matches = []
     checkFor(m_newMatches.position, m_refilled.boardState);
-    
-    // // Get Matches
-    // let m_anyMatchingOn = anyMatchingOn(m_refilled.boardState, m_newMatches.position)
-    // if(m_anyMatchingOn == "Both"|| m_anyMatchingOn=="None") break; // Figure out something for Both later
-    
-    // let m_getMatches = getMatchPositions(m_refilled.boardState, m_anyMatchingOn, m_newMatches.position);
-    
+
     // Remove Matches
     m_newBoardState = removeMatchesFrom(m_refilled.boardState, m_matches);
     
@@ -275,7 +269,6 @@ export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: P
 
     // Check for new matches
     m_newMatches = anyMatching(m_refilled);
-    m_newMatches.any = false; // NO INFINITE LOOPS ALLOWED
   }
 
   // Create Move Result
