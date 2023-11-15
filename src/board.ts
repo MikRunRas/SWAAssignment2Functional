@@ -256,6 +256,8 @@ export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: P
   // Check for any matches caused by Refilling
   let m_newMatches: { any: boolean; position: Position } = anyMatching(m_refilled);
   while (m_newMatches.any) {
+    // Reset Matches
+    m_matches = []
     checkFor(m_newMatches.position, m_refilled.boardState);
 
     // // Get Matches
@@ -265,7 +267,7 @@ export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: P
     // let m_getMatches = getMatchPositions(m_refilled.boardState, m_anyMatchingOn, m_newMatches.position);
 
     // Remove Matches
-    m_newBoardState = removeMatchesFrom(m_newBoardState, m_matches);
+    m_newBoardState = removeMatchesFrom(m_refilled.boardState, m_matches);
 
     // Refill
     m_refilled = refillBoard({ ...m_board, boardState: m_newBoardState });
