@@ -1,5 +1,3 @@
-import { transformFileSync } from "@babel/core";
-
 export type Generator<T> = { next: () => T };
 
 export type Position = {
@@ -26,99 +24,99 @@ export type MoveResult<T> = {
   effects: Effect<T>[];
 };
 
-export function create<T>(generator: Generator<T>, w: number, h: number): Board<T> {
+export function create<T>(c_generator: Generator<T>, c_width: number, c_height: number): Board<T> {
   function createEmptyBoard(): T[][] {
-    let state: T[][] = [];
+    const ceb_boardState: T[][] = [];
 
     // Loop through number of Columns
-    for (let col = 0; col < w; col++) {
+    for (let col = 0; col < c_width; col++) {
       // Create an Empty Column
-      let column: T[] = [];
+      let ceb_column: T[] = [];
 
       // Loop through number of Rows
-      for (let row = 0; row < h; row++) {
+      for (let row = 0; row < c_height; row++) {
         // Add NULL to the Column
-        column.push(null);
+        ceb_column.push(null);
       }
 
       // Add Columm to the state
-      state.push(column);
+      ceb_boardState.push(ceb_column);
     }
 
-    return state;
+    return ceb_boardState;
   }
 
   // Return the Board
   return {
     // Field: Value
-    sequenceGenerator: generator,
-    boardState: populateBoard(createEmptyBoard(), generator),
-    width: w,
-    height: h,
+    sequenceGenerator: c_generator,
+    boardState: populateBoard(createEmptyBoard(), c_generator),
+    width: c_width,
+    height: c_height,
   };
 }
 
-function populateBoard<T>(board: T[][], generator: Generator<T>): T[][] {
-  let newBoard: T[][] = board.slice();
+function populateBoard<T>(pb_board: T[][], pb_generator: Generator<T>): T[][] {
+  const pb_newBoard: T[][] = duplicateBoard(pb_board);
 
   // Loop through Board State, row -> col, col, [...]
-  for (let row = 0; row < newBoard[0].length; row++) {
-    for (let col = 0; col < newBoard.length; col++) {
+  for (let row = 0; row < pb_newBoard[0].length; row++) {
+    for (let col = 0; col < pb_newBoard.length; col++) {
       // Return if Piece already exists
-      if (board[col][row] !== null) continue;
+      if (pb_board[col][row]) continue;
 
       // Set the Piece
-      let nextPiece = generator.next();
-      newBoard[col][row] = nextPiece;
+      const pb_nextPiece = pb_generator.next();
+      pb_newBoard[col][row] = pb_nextPiece;
     }
   }
 
-  return newBoard;
+  return pb_newBoard;
 }
 
-export function piece<T>(board: Board<T>, p: Position): T | undefined {
+export function piece<T>(p_board: Board<T>, p_pos: Position): T | undefined {
   // Check for Out Of Bounds (OOB)
-  if (p.row < 0 || p.col < 0 || p.row >= board.height || p.col >= board.width) {
+  if (outOfBounds(p_board, p_pos)) {
     return undefined;
   }
 
   // Get the BoardState
-  let boardState = board.boardState;
+  const p_boardState = p_board.boardState;
 
   // Retrieve Piece from BoardState
-  let piece = boardState[p.col][p.row];
+  const p_piece = p_boardState[p_pos.col][p_pos.row];
 
   // Return Piece
-  return piece;
+  return p_piece;
 }
 
-export function canMove<T>(board: Board<T>, first: Position, second: Position): boolean {
+export function canMove<T>(cm_board: Board<T>, cm_first: Position, cm_second: Position): boolean {
   function illegalMoves(): boolean {
-    let piece1 = piece(board, first);
-    let piece2 = piece(board, second);
-    if (piece1 === undefined || piece2 === undefined) return true;
+    const im_piece1 = piece(cm_board, cm_first);
+    const im_piece2 = piece(cm_board, cm_second);
+    if (im_piece1 === undefined || im_piece2 === undefined) return true;
 
-    const c1 = first.col,
-      c2 = second.col,
-      r1 = first.row,
-      r2 = second.row;
+    const im_c1 = cm_first.col,
+      im_c2 = cm_second.col,
+      im_r1 = cm_first.row,
+      im_r2 = cm_second.row;
 
     // Return true if not in a Cardinal Direction
-    if (c1 != c2 && r1 != r2) return true;
+    if (im_c1 != im_c2 && im_r1 != im_r2) return true;
 
     // Calculate Difference between Columns && Rows && Magic (Maths)
-    const c_diff = c1 - c2,
-      r_diff = r1 - r2;
+    const im_col_diff = im_c1 - im_c2,
+      im_row_diff = im_r1 - im_r2;
 
-    return c_diff == 0 && r_diff == 0;
+    return im_col_diff == 0 && im_row_diff == 0;
   }
 
   function legalMoves(): boolean {
     // Perform a Swap to check for possible matches
-    let simulatedBoard: T[][] = swapPieces(board.boardState, first, second);
+    let lm_simulatedBoard: T[][] = swapPieces(cm_board.boardState, cm_first, cm_second);
 
     // Check if Any Matches are found
-    if (anyMatchingOn(simulatedBoard, first) == "None" && anyMatchingOn(simulatedBoard, second) == "None") {
+    if (anyMatchingOn(lm_simulatedBoard, cm_first) == "None" && anyMatchingOn(lm_simulatedBoard, cm_second) == "None") {
       // No Matches Found
       return false;
     }
@@ -130,332 +128,363 @@ export function canMove<T>(board: Board<T>, first: Position, second: Position): 
   return legalMoves();
 }
 
-function anyMatchingOn<T>(board: T[][], p: Position): "Horizontal" | "Vertical" | "Both" | "None" {
+function anyMatchingOn<T>(amo_board: T[][], amo_pos: Position): "Horizontal" | "Vertical" | "Both" | "None" {
   // Reference Vectors
-  const [n, e, s, w]: Position[] = [
+  const [amo_n, amo_e, amo_s, amo_w]: Position[] = [
     { row: -1, col: 0 },
     { row: 0, col: 1 },
     { row: 1, col: 0 },
     { row: 0, col: -1 },
   ];
 
-  let referencePiece = getPiece(board, p);
+  const amo_refPiece: T = getPiece(amo_board, amo_pos);
 
-  // Check if there are any matches
-  let match_WE = checkNext(board, referencePiece, p, w) + checkNext(board, referencePiece, p, e) - 1; // -1 to ensure the piece itself isn't counted twice
-  let match_NS = checkNext(board, referencePiece, p, n) + checkNext(board, referencePiece, p, s) - 1; // -1 to ensure the piece itself isn't counted twice
+  // Skip checking if Reference Piece is undefined
+  if (amo_refPiece) {
+    // Check if there are any matches
+    const amo_match_WE = checkNext(amo_board, amo_refPiece, amo_pos, amo_w) + checkNext(amo_board, amo_refPiece, amo_pos, amo_e) - 1; // -1 to ensure the piece itself isn't counted twice
+    const amo_match_NS = checkNext(amo_board, amo_refPiece, amo_pos, amo_n) + checkNext(amo_board, amo_refPiece, amo_pos, amo_s) - 1; // -1 to ensure the piece itself isn't counted twice
 
-  if (match_WE >= 3 && match_NS >= 3) return "Both";
-  if (match_WE >= 3) return "Horizontal";
-  if (match_NS >= 3) return "Vertical";
+    // Check direction for matches
+    if (amo_match_WE >= 3 && amo_match_NS >= 3) return "Both";
+    if (amo_match_WE >= 3) return "Horizontal";
+    if (amo_match_NS >= 3) return "Vertical";
+  }
   return "None";
 }
 
-function checkNext<T>(board: T[][], reference: T, current: Position, direction: Position): number {
+function checkNext<T>(cn_board: T[][], cn_refPiece: T, cn_currPos: Position, cn_dir: Position): number {
   // Get the Piece at the current Position
-  let currentPiece = getPiece(board, current);
+  const cn_currPiece: T = getPiece(cn_board, cn_currPos);
 
   // Chec if the Piece matches the Reference Piece
-  if (currentPiece == reference) {
+  if (cn_currPiece && cn_currPiece == cn_refPiece) {
     // Calculate the next position
-    const newPos: Position = {
-      col: current.col + direction.col,
-      row: current.row + direction.row,
+    const cn_newPos: Position = {
+      col: cn_currPos.col + cn_dir.col,
+      row: cn_currPos.row + cn_dir.row,
     };
 
     // Recursion to get multiple pieces
-    return 1 + checkNext(board, reference, newPos, direction);
+    return 1 + checkNext(cn_board, cn_refPiece, cn_newPos, cn_dir);
   } else {
     return 0;
   }
 }
 
-function swapPieces<T>(board: T[][], p1: Position, p2: Position): T[][] {
+function swapPieces<T>(sp_board: T[][], sp_p1: Position, sp_p2: Position): T[][] {
   // Copy the Board
-  let swappedBoard: T[][] = board.map((arr) => arr.slice());
+  const sp_newBoard: T[][] = duplicateBoard(sp_board);
 
   // Perform Swap
-  let tmp: T = getPiece(swappedBoard, p1);
-  swappedBoard[p1.col][p1.row] = getPiece(swappedBoard, p2);
-  swappedBoard[p2.col][p2.row] = tmp;
+  const sp_tmp: T = getPiece(sp_newBoard, sp_p1);
+  sp_newBoard[sp_p1.col][sp_p1.row] = getPiece(sp_newBoard, sp_p2);
+  sp_newBoard[sp_p2.col][sp_p2.row] = sp_tmp;
 
   // Return the board
-  return swappedBoard;
+  return sp_newBoard;
 }
 
-export function move<T>(generator: Generator<T>, board: Board<T>, first: Position, second: Position): MoveResult<T> {
-  function checkFor(cf_pos: Position) {
+export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: Position, m_second: Position): MoveResult<T> {
+  /**
+   * Checks a given position for Matches and adds a Match Event to m_effects as well as adding the Match Positions to m_matches
+   * @param cf_pos position to check for matches from
+   * @param [cf_boardState=m_newBoardState] optional BoardState to check
+   */
+  function checkFor(cf_pos: Position, cf_boardState: T[][] = m_newBoardState) {
     let cf_direction: "None" | "Horizontal" | "Vertical" | "Both";
 
-    cf_direction = anyMatchingOn(m_newBoardState, cf_pos);
+    cf_direction = anyMatchingOn(cf_boardState, cf_pos);
     if (cf_direction != "None") {
       if (cf_direction == "Both") {
         // Get the Horizontal & Vertical Matches
-        let cf_horizontalMatches: Effect<T> = getMatchEvent(m_newBoardState, cf_pos, "Horizontal", m_matched);
-        let cf_verticalMatches: Effect<T> = getMatchEvent(m_newBoardState, cf_pos, "Vertical", m_matched);
+        let cf_horizontalMatches: Effect<T> = getMatchEvent(cf_boardState, cf_pos, "Horizontal");
+        let cf_verticalMatches: Effect<T> = getMatchEvent(cf_boardState, cf_pos, "Vertical");
 
         // Push the Matches to the Effects
         m_effects.push(cf_horizontalMatches);
         m_effects.push(cf_verticalMatches);
 
         // Get the Matches' Positions
-        m_matches = getMatchPositions(m_newBoardState, "Horizontal", cf_pos);
-        m_matches = m_matches.concat(getMatchPositions(m_newBoardState, "Vertical", cf_pos));
+        m_matches = getMatchPositions(cf_boardState, "Horizontal", cf_pos);
+        m_matches = m_matches.concat(getMatchPositions(cf_boardState, "Vertical", cf_pos));
       } else {
-        m_effects.push(getMatchEvent(m_newBoardState, cf_pos, cf_direction, m_matched));
-        if (m_matches === undefined) {
-          m_matches = getMatchPositions(m_newBoardState, cf_direction, cf_pos);
+        m_effects.push(getMatchEvent(cf_boardState, cf_pos, cf_direction));
+        if (!m_matches) {
+          m_matches = getMatchPositions(cf_boardState, cf_direction, cf_pos);
         } else {
-          m_matches = m_matches.concat(getMatchPositions(m_newBoardState, cf_direction, cf_pos));
+          m_matches = m_matches.concat(getMatchPositions(cf_boardState, cf_direction, cf_pos));
         }
       }
     }
   }
 
-  function anyMatching(am_board: Board<T>): boolean {
-    let am_positions: Position[] = positions(am_board);
+  function anyMatching(am_board: Board<T>): { any: boolean; position: Position } {
+    const am_positions: Position[] = positions(am_board);
 
-    for (const am_pos of am_positions) {
-      if (anyMatchingOn(am_board.boardState, am_pos) != "None") return true;
+    for (const pos of am_positions) {
+      if (anyMatchingOn(am_board.boardState, pos) != "None") return { any: true, position: pos };
     }
 
-    return false;
+    return { any: false, position: null };
   }
 
-  let m_result: MoveResult<T>;
-
   // Return Null if a Move is not allowed
-  if (!canMove(board, first, second)) {
-    m_result = { board: board, effects: [] };
-
-    return m_result;
+  if (!canMove(m_board, m_first, m_second)) {
+    return { board: m_board, effects: [] };
   }
 
   // Create the board with the pieces swapped
-  let m_newBoardState: T[][] = swapPieces(board.boardState, first, second);
+  let m_newBoardState: T[][] = swapPieces(m_board.boardState, m_first, m_second);
 
-  // Create Variables
-  let m_matched: T;
+  // Create Variables used in checkFor(Position)
   let m_matches: Position[];
   let m_effects: Effect<T>[] = [];
-  let m_cleaned: T[][];
-  let m_refilled: Board<T>;
-  let m_hasMatching: boolean;
 
-  do {
-    // Check for Matches on First Position
-    checkFor(first);
+  // Check for Matches on First Position
+  checkFor(m_first);
 
-    // Check for Matches on Second Position
-    checkFor(second);
+  // Check for Matches on Second Position
+  checkFor(m_second);
 
-    m_effects.push({ kind: "Refill" });
+  m_effects.push({ kind: "Refill" });
 
-    // REMOVE AND REFILL MATCHED POSITIONS
-    m_cleaned = removeMatchesFrom(m_newBoardState, m_matches);
-    m_refilled = refillBoard({ ...board, boardState: m_cleaned });
+  // REMOVE AND REFILL MATCHED POSITIONS
+  m_newBoardState = removeMatchesFrom(m_newBoardState, m_matches);
+  let m_refilled: Board<T> = refillBoard({ ...m_board, boardState: m_newBoardState });
+
+  // Check for any matches caused by Refilling
+  let m_newMatches: { any: boolean; position: Position } = anyMatching(m_refilled);
+  while (m_newMatches.any) {
+    checkFor(m_newMatches.position, m_refilled.boardState);
+
+    // // Get Matches
+    // let m_anyMatchingOn = anyMatchingOn(m_refilled.boardState, m_newMatches.position)
+    // if(m_anyMatchingOn == "Both"|| m_anyMatchingOn=="None") break; // Figure out something for Both later
+
+    // let m_getMatches = getMatchPositions(m_refilled.boardState, m_anyMatchingOn, m_newMatches.position);
+
+    // Remove Matches
+    m_newBoardState = removeMatchesFrom(m_newBoardState, m_matches);
+
+    // Refill
+    m_refilled = refillBoard({ ...m_board, boardState: m_newBoardState });
 
     // Check for new matches
-    m_hasMatching = anyMatching(m_refilled);
-  } while (m_hasMatching);
+    m_newMatches = anyMatching(m_refilled);
+    m_newMatches.any = false; // NO INFINITE LOOPS ALLOWED
+  }
 
   // Create Move Result
-  m_result = { board: m_refilled, effects: m_effects };
+  const m_result = { board: m_refilled, effects: m_effects };
 
   // Return Statement
   return m_result;
 }
 
-function removeMatchesFrom<T>(board: T[][], matches: Position[]): T[][] {
-  let newBoard: T[][] = board.map((arr) => arr.slice());
+function removeMatchesFrom<T>(rmf_board: T[][], rmf_matches: Position[]): T[][] {
+  // Duplicate BoardState
+  const rmf_newBoard: T[][] = duplicateBoard(rmf_board);
 
-  matches.forEach((m) => (newBoard[m.col][m.row] = null));
+  // Remove all Pieces on Positions matching rmf_matches on the duplicated BoardState
+  rmf_matches.forEach((_) => (rmf_newBoard[_.col][_.row] = null));
 
-  return newBoard;
+  // Return the new BoardState
+  return rmf_newBoard;
 }
 
-export function refillBoard<T>(board: Board<T>): Board<T> {
-  let newBoardState: T[][] = board.boardState.map((arr) => arr.slice());
+export function refillBoard<T>(rb_board: Board<T>): Board<T> {
+  const rb_newBoardState: T[][] = duplicateBoard(rb_board.boardState);
 
   // Loop through each row starting from the bottom
-  for (let row = board.height - 1; row > 0; row--) {
-    for (let col = 0; col < board.width; col++) {
+  for (let row = rb_board.height - 1; row > 0; row--) {
+    for (let col = 0; col < rb_board.width; col++) {
       // Check if the current position is null
-      if (newBoardState[col][row] === null) {
+      if (!rb_newBoardState[col][row]) {
         // Find the first non-null piece in the column above
         let nonNullRow = row - 1;
-        while (nonNullRow >= 0 && newBoardState[col][nonNullRow] === null) {
+        while (nonNullRow >= 0 && !rb_newBoardState[col][nonNullRow]) {
           nonNullRow--;
         }
 
         // Replace null with the first non-null piece above it (if found)
         if (nonNullRow >= 0) {
-          newBoardState[col][row] = newBoardState[col][nonNullRow];
-          newBoardState[col][nonNullRow] = null; // Set the position above to null
+          rb_newBoardState[col][row] = rb_newBoardState[col][nonNullRow];
+          rb_newBoardState[col][nonNullRow] = null; // Set the position above to null
         }
       }
     }
   }
 
   // Loop through each row from the bottom to the top
-  for (let row = board.height - 1; row >= 0; row--) {
-    for (let col = 0; col < board.width; col++) {
+  for (let row = rb_board.height - 1; row >= 0; row--) {
+    for (let col = 0; col < rb_board.width; col++) {
       // Check if the tile is missing (null)
-      if (newBoardState[col][row] === null) {
+      if (!rb_newBoardState[col][row]) {
         // Generate a new tile using the sequence generator
-        let newTile = board.sequenceGenerator.next();
+        const rb_newTile = rb_board.sequenceGenerator.next();
 
         // Replace the missing tile with the new one
-        newBoardState[col][row] = newTile;
+        rb_newBoardState[col][row] = rb_newTile;
       }
     }
   }
 
   // Create a new board with the updated board state
-  let newBoard: Board<T> = {
-    sequenceGenerator: board.sequenceGenerator,
-    boardState: newBoardState,
-    width: board.width,
-    height: board.height,
+  const rb_newBoard: Board<T> = {
+    sequenceGenerator: rb_board.sequenceGenerator,
+    boardState: rb_newBoardState,
+    width: rb_board.width,
+    height: rb_board.height,
   };
 
-  return newBoard;
+  return rb_newBoard;
 }
 
 /**
  *
- * @param b updated state of the board
- * @param pos position to start from
- * @param dir cardinal direction to check
- * @param matched piece
+ * @param gme_board updated state of the board
+ * @param gme_pos position to start from
+ * @param gme_dir cardinal direction to check
  * @returns match event
  */
-function getMatchEvent<T>(b: T[][], pos: Position, dir: "Vertical" | "Horizontal" | "None", matched: T): Effect<T> {
-  let matchEvents: Effect<T>;
+function getMatchEvent<T>(gme_board: T[][], gme_pos: Position, gme_dir: "Vertical" | "Horizontal" | "None"): Effect<T> {
+  // Return Null if no direction was found
+  if (gme_dir == "None") return null;
 
-  if (dir != "None") {
-    // Get Matches
-    matched = getPiece(b, pos);
-    let matches = getMatchPositions(b, dir, pos);
+  // Get Matches
+  const gme_piece = getPiece(gme_board, gme_pos);
+  const gme_matchPositions = getMatchPositions(gme_board, gme_dir, gme_pos);
 
-    // Add Matches to Effect
-    let match = { matched: matched, positions: matches };
-    matchEvents = { kind: "Match", match: match };
-  }
-
-  return matchEvents;
+  // Add Matches to Effect
+  const gme_match = { matched: gme_piece, positions: gme_matchPositions };
+  return { kind: "Match", match: gme_match };
 }
 
-function getMatchPositions<T>(b: T[][], dir: "Vertical" | "Horizontal", refPos: Position): Position[] {
-  function getFirstInDirection(board: T[][], p: Position, d: "Vertical" | "Horizontal", reference: T): Position {
-    let dir: Position = directionToVector(d, true); // Vector Direction towards start of chain
+function getMatchPositions<T>(gmp_board: T[][], gmp_dir: "Vertical" | "Horizontal", gmp_refPos: Position): Position[] {
+  function getFirstInDirection(gfid_board: T[][], gfid_pos: Position, gfid_dir: "Vertical" | "Horizontal", gfid_refPiece: T): Position {
+    let gfid_dir_vector: Position = directionToVector(gfid_dir, true); // Vector Direction towards start of chain
 
     // Loop through pieces until the next does not match
-    dir = checkNextIs(board, p, dir, reference);
+    gfid_dir_vector = checkNextIs(gfid_board, gfid_pos, gfid_dir_vector, gfid_refPiece);
 
-    return dir;
+    return gfid_dir_vector;
   }
 
-  function checkNextIs(board: T[][], p: Position, dir: Position, reference: T): Position {
-    let newPos: Position = {
-      col: p.col + dir.col,
-      row: p.row + dir.row,
+  function checkNextIs(cni_board: T[][], cni_pos: Position, cni_dir: Position, cni_refPiece: T): Position {
+    const cni_newPos: Position = {
+      col: cni_pos.col + cni_dir.col,
+      row: cni_pos.row + cni_dir.row,
     };
 
     // Get Next Piece
-    let actualPiece: T = getPiece(board, newPos);
+    const cni_actualPiece: T = getPiece(cni_board, cni_newPos);
 
     // Check if Piece Matches
-    if (actualPiece != reference) {
+    if (cni_actualPiece != cni_refPiece) {
       // Return position if it does not match
-      return p;
+      return cni_pos;
     } else {
-      return checkNextIs(board, newPos, dir, reference);
+      return checkNextIs(cni_board, cni_newPos, cni_dir, cni_refPiece);
     }
   }
 
-  function getMatching(b: T[][], p: Position, dir: "Vertical" | "Horizontal", r: T): Position[] {
+  function getMatching(gm_board: T[][], gm_pos: Position, gm_dir: "Vertical" | "Horizontal", gm_refPiece: T): Position[] {
     // Empty Array to fill
-    let matching: Position[] = [];
+    const gm_matching: Position[] = [];
 
     // Direction
-    let d = directionToVector(dir);
+    let gm_dir_vector = directionToVector(gm_dir);
 
-    addNext(b, p, d, r, matching);
+    addNext(gm_board, gm_pos, gm_dir_vector, gm_refPiece, gm_matching);
 
-    return matching;
+    return gm_matching;
   }
 
-  function addNext(board: T[][], current: Position, dir: Position, reference: T, matchList: Position[]) {
+  function addNext(an_board: T[][], am_currPos: Position, am_dir: Position, am_refPiece: T, am_matchList: Position[]) {
     // Next Position
-    let n: Position = {
-      col: current.col + dir.col,
-      row: current.row + dir.row,
+    const am_nextPos: Position = {
+      col: am_currPos.col + am_dir.col,
+      row: am_currPos.row + am_dir.row,
     };
 
     // Add to List
-    matchList.push(current);
+    am_matchList.push(am_currPos);
 
+    // Break Recursion
+    if (getPiece(an_board, am_nextPos) != am_refPiece) return;
+    
     // Recursive Checks
-    if (getPiece(board, n) == reference) addNext(board, n, dir, reference, matchList);
+    addNext(an_board, am_nextPos, am_dir, am_refPiece, am_matchList);
   }
 
-  function directionToVector(d: "Vertical" | "Horizontal", reverse: boolean = false) {
+  function directionToVector(dtv_string: "Vertical" | "Horizontal", dtv_isReverse: boolean = false) {
     // Get Direction as a Vector
-    const scale = reverse ? -1 : 1;
-    switch (d) {
+    const dtv_scale = dtv_isReverse ? -1 : 1; // Convert Boolean to Multiplier
+    switch (dtv_string) {
       case "Vertical":
-        return { col: 0, row: scale };
+        return { col: 0, row: dtv_scale };
       case "Horizontal":
-        return { col: scale, row: 0 };
-      default:
-        throw Error(`Direction (${d}) neither Horizontal or Vertical`);
+        return { col: dtv_scale, row: 0 };
+      default: // Shouldn't be reached, but we'll see
+        throw Error(`Direction (${dtv_string}) neither Horizontal or Vertical`);
     }
   }
 
   // Get Reference Piece
-  let piece: T = getPiece(b, refPos);
+  const gmp_piece: T = getPiece(gmp_board, gmp_refPos);
 
   // Get First Position in Line
-  let firstInDir: Position = getFirstInDirection(b, refPos, dir, piece);
+  let gmp_firstInDir: Position = getFirstInDirection(gmp_board, gmp_refPos, gmp_dir, gmp_piece);
 
   // Get remaining positions
-  let matches: Position[] = getMatching(b, firstInDir, dir, piece);
+  let gmp_matches: Position[] = getMatching(gmp_board, gmp_firstInDir, gmp_dir, gmp_piece);
 
-  return matches;
+  return gmp_matches;
 }
 
 /**
  * Get all Positions as a Position[], (row 0, col 0 -> MAX), (row 1, col 0 -> MAX)
  *
- * @param board Board to get positions for
+ * @param p_board Board to get positions for
  * @returns List of Positons
  */
-export function positions<T>(board: Board<T>): Position[] {
-  let positions: Position[] = [];
+export function positions<T>(p_board: Board<T>): Position[] {
+  const p_positions: Position[] = [];
 
   // Loop through all Rows
-  for (let y = 0; y < board.height; y++) {
+  for (let y = 0; y < p_board.height; y++) {
     // Loop through all Columnss
-    for (let x = 0; x < board.width; x++) {
+    for (let x = 0; x < p_board.width; x++) {
       // Create a new Position
-      let position: Position = { col: x, row: y };
+      const p_pos: Position = { col: x, row: y };
 
       // Add Position to the list of Positions
-      positions.push(position);
+      p_positions.push(p_pos);
     }
   }
 
   // Return
-  return positions;
+  return p_positions;
 }
 
-function getPiece<T>(board: T[][], p: Position): T | undefined {
-  if (p.col < 0 || p.row < 0 || board.length <= p.col || board[0].length <= p.row) {
+function getPiece<T>(gp_board: T[][], gp_pos: Position): T | undefined {
+  if (gp_pos.col < 0 || gp_pos.row < 0 || gp_board.length <= gp_pos.col || gp_board[0].length <= gp_pos.row) {
     // Out Of Bounds
     return undefined;
   }
 
   // Inside Bounds
-  return board[p.col][p.row];
+  return gp_board[gp_pos.col][gp_pos.row];
+}
+
+function duplicateBoard<T>(db_board: T[][]): T[][] {
+  const db_duplicate = db_board.map((arr) => arr.slice());
+  return db_duplicate;
+}
+
+function outOfBounds<T>(oob_board: Board<T>, oob_pos: Position): boolean {
+  if (oob_pos.row < 0 || oob_pos.col < 0 || oob_pos.row >= oob_board.height || oob_pos.col >= oob_board.width) {
+    return true;
+  }
 }
