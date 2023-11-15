@@ -247,30 +247,31 @@ export function move<T>(m_generator: Generator<T>, m_board: Board<T>, m_first: P
   // Check for Matches on Second Position
   checkFor(m_second);
 
-  m_effects.push({ kind: "Refill" });
-
+  
   // REMOVE AND REFILL MATCHED POSITIONS
   m_newBoardState = removeMatchesFrom(m_newBoardState, m_matches);
   let m_refilled: Board<T> = refillBoard({ ...m_board, boardState: m_newBoardState });
-
+  m_effects.push({ kind: "Refill" });
+  
   // Check for any matches caused by Refilling
   let m_newMatches: { any: boolean; position: Position } = anyMatching(m_refilled);
   while (m_newMatches.any) {
     // Reset Matches
     m_matches = []
     checkFor(m_newMatches.position, m_refilled.boardState);
-
+    
     // // Get Matches
     // let m_anyMatchingOn = anyMatchingOn(m_refilled.boardState, m_newMatches.position)
     // if(m_anyMatchingOn == "Both"|| m_anyMatchingOn=="None") break; // Figure out something for Both later
-
+    
     // let m_getMatches = getMatchPositions(m_refilled.boardState, m_anyMatchingOn, m_newMatches.position);
-
+    
     // Remove Matches
     m_newBoardState = removeMatchesFrom(m_refilled.boardState, m_matches);
-
+    
     // Refill
     m_refilled = refillBoard({ ...m_board, boardState: m_newBoardState });
+    m_effects.push({ kind: "Refill" });
 
     // Check for new matches
     m_newMatches = anyMatching(m_refilled);
